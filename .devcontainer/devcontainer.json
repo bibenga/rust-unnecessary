@@ -9,7 +9,8 @@
 		"rust-unnecessary"
 	],
 	"remoteEnv": {
-		"DEBIAN_FRONTEND": "noninteractive"
+		"DEBIAN_FRONTEND": "noninteractive",
+		"RUST_LOG": "debug"
 	},
 	// "postCreateCommand": "sudo apt-get update && sudo apt-get -y install --no-install-recommends sqlite3 libsqlite3-dev libboost-all-dev libpoco-dev",
 	// Features to add to the dev container. More info: https://containers.dev/features.
