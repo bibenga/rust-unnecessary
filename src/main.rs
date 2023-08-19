@@ -1,9 +1,8 @@
+use actix_web::{get, middleware::Logger, web, App, HttpServer, Responder};
+use log::info;
 use std::fmt;
-use std::time::SystemTime;
-use log::{info, warn};
-
-// #[macro_use]
-// extern crate log;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 #[derive(Debug)]
 struct User {
@@ -23,47 +22,42 @@ impl User {
     // }
 }
 
-fn setup_logger() -> Result<(), fern::InitError> {
-    fern::Dispatch::new()
-        .format(|out, message, record| {
-            out.finish(format_args!(
-                "[{} {} {}] {}",
-                humantime::format_rfc3339_seconds(SystemTime::now()),
-                record.level(),
-                record.target(),
-                message
-            ))
-        })
-        .level(log::LevelFilter::Debug)
-        .chain(std::io::stdout())
-        .apply()?;
-    Ok(())
+#[utoipa::path(get, path = "/hello/{name}")]
+#[get("/hello/{name}")]
+async fn say_hello(name: web::Path<String>) -> impl Responder {
+    format!("Hello {name}!")
 }
 
-fn main() {
-    let _ = setup_logger();
+#[actix_web::main] // or #[tokio::main]
+async fn main() -> std::io::Result<()> {
+    env_logger::init();
+    info!("starting...");
 
-    let x: u128 = "42".parse().expect("Not a number!");
-    let y = {
-        "432".parse::<u128>().expect("Not a number!")
-    };
-    println!("x => {x}; y => {y}");
+    #[derive(OpenApi)]
+    #[openapi(
+        paths(
+            say_hello,
+        ),
+        components(
+            // schemas(todo::Todo, todo::TodoUpdateRequest, todo::ErrorResponse)
+        ),
+        tags(
+            (name = "palabras", description = "Palabras API")
+        ),
+        // modifiers(&SecurityAddon)
+    )]
+    struct ApiDoc;
 
-    let s = String::from("hello");
-    println!("s => '{s}'");
-
-    let user1 = User {
-        username: String::from("user1"),
-        is_active_flg: true,
-    };
-    println!("user1 => '{user1}'");
-
-    xfn();
-
-    info!("info");
-    warn!("warn");
-}
-
-fn xfn() {
-    println!("Another function.");
+    HttpServer::new(|| {
+        App::new()
+            .service(
+                SwaggerUi::new("/swagger-ui/{_:.*}")
+                    .url("/api-docs/openapi.json", ApiDoc::openapi()),
+            )
+            .service(say_hello)
+            .wrap(Logger::default())
+    })
+    .bind(("127.0.0.1", 8000))?
+    .run()
+    .await
 }
